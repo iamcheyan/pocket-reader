@@ -1,5 +1,12 @@
 # Pocket Reader
 
+
+> **PocketJS port (product target):** `apps/pocket-reader/pocket/` is the
+> native PocketJS program (Solid TSX → `.pocket` → `pocket-linux-kms`). The
+> `frontend/` tree remains the frozen React design reference and is not
+> extended. Frames: `docs/pocket/`; verification:
+> `apps/pocket-reader/POCKETJS-VERIFICATION.md`.
+
 A PJOS reference reading application built with a PocketJS-compatible web UI (React + TypeScript + Vite), the Go `readerd` service, and SQLite. The frontend talks only to the readerd REST API; it never reads book files, parses EPUB, or touches SQLite directly.
 
 ## Run
