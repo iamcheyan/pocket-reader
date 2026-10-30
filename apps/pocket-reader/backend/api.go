@@ -10,6 +10,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -54,7 +57,10 @@ func (s *Server) book(w http.ResponseWriter, r *http.Request) {
 			}
 			jsonOut(w, map[string]bool{"favorite": true})
 		case "DELETE":
-			_, e := s.db.Exec("UPDATE books SET favorite=0 WHERE id=?", id)
+			if _, err := s.db.Exec("UPDATE books SET favorite=0 WHERE id=?", id); err != nil {
+				fail(w, 500, "database", err.Error())
+				return
+			}
 			w.WriteHeader(204)
 		default:
 			fail(w, 405, "method_not_allowed", "Method not allowed")
@@ -178,12 +184,14 @@ func (s *Server) book(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) bookPath(id string) (Book, error) {
 	var b Book
-	var tags string
+	var tags sql.NullString
+	var p sql.NullString
 	var f, m int
-	e := s.db.QueryRow("SELECT id,title,author,series,language,format,path,size,modified,cover,tags,favorite,mock FROM books WHERE id=?", id).Scan(&b.ID, &b.Title, &b.Author, &b.Series, &b.Language, &b.Format, &b.Path, &b.Size, &b.Modified, &b.Cover, &tags, &f, &m)
+	e := s.db.QueryRow("SELECT id,title,author,series,language,format,path,size,modified,cover,tags,favorite,mock FROM books WHERE id=?", id).Scan(&b.ID, &b.Title, &b.Author, &b.Series, &b.Language, &b.Format, &p, &b.Size, &b.Modified, &b.Cover, &tags, &f, &m)
 	b.Mock = m != 0
 	if e == nil {
-		_ = json.Unmarshal([]byte(tags), &b.Tags)
+		b.Path = p.String
+		_ = json.Unmarshal([]byte(tags.String), &b.Tags)
 		b.Favorite = f != 0
 		_ = s.db.QueryRow("SELECT percent FROM reading_progress WHERE book_id=?", b.ID).Scan(&b.Progress)
 	}
@@ -198,29 +206,24 @@ func providerFor(p string) Provider {
 	return nil
 }
 func (s *Server) home(w http.ResponseWriter, r *http.Request) {
-	rows, _ := s.db.Query("SELECT id,title,author,series,language,format,path,size,modified,cover,tags,favorite,mock FROM books ORDER BY id DESC LIMIT 12")
-	recent := []Book{}
-	if rows != nil {
-		defer rows.Close()
-		for rows.Next() {
-			b, e := scanBook(rows)
-			if e == nil {
-				recent = append(recent, b)
-			}
-		}
-	}
-	cr, _ := s.db.Query("SELECT b.id,b.title,b.author,b.series,b.language,b.format,b.path,b.size,b.modified,b.cover,b.tags,b.favorite,b.mock FROM books b JOIN reading_progress p ON b.id=p.book_id ORDER BY p.updated_at DESC LIMIT 10")
-	cont := []Book{}
-	if cr != nil {
-		defer cr.Close()
-		for cr.Next() {
-			b, e := scanBook(cr)
-			if e == nil {
-				cont = append(cont, b)
-			}
-		}
-	}
+	recent := s.queryBooks("SELECT id,title,author,series,language,format,path,size,modified,cover,tags,favorite,mock FROM books ORDER BY id DESC LIMIT 12")
+	cont := s.queryBooks("SELECT b.id,b.title,b.author,b.series,b.language,b.format,b.path,b.size,b.modified,b.cover,b.tags,b.favorite,b.mock FROM books b JOIN reading_progress p ON b.id=p.book_id ORDER BY p.updated_at DESC LIMIT 10")
 	jsonOut(w, map[string]any{"continue_reading": cont, "recently_added": recent, "favorites": s.bookQuery("favorite=1"), "recent_notes": s.notesQuery("", 10), "collections": s.collectionQuery()})
+}
+func (s *Server) queryBooks(query string, args ...any) []Book {
+	rows, e := s.db.Query(query, args...)
+	if e != nil {
+		return []Book{}
+	}
+	defer rows.Close()
+	out := []Book{}
+	for rows.Next() {
+		b, err := scanBook(rows)
+		if err == nil {
+			out = append(out, b)
+		}
+	}
+	return out
 }
 func (s *Server) bookQuery(where string) []Book {
 	rows, e := s.db.Query("SELECT id,title,author,series,language,format,path,size,modified,cover,tags,favorite,mock FROM books WHERE " + where + " ORDER BY id DESC LIMIT 10")
@@ -238,13 +241,13 @@ func (s *Server) bookQuery(where string) []Book {
 	return a
 }
 func (s *Server) notesQuery(book string, limit int) []map[string]any {
-	q := "SELECT id,book_id,loc,text,created_at,updated_at FROM notes"
+	q := "SELECT n.id,n.book_id,n.loc,n.text,n.created_at,n.updated_at,COALESCE(b.title,'') FROM notes n LEFT JOIN books b ON b.id=n.book_id"
 	args := []any{}
 	if book != "" {
-		q += " WHERE book_id=?"
+		q += " WHERE n.book_id=?"
 		args = append(args, book)
 	}
-	q += " ORDER BY updated_at DESC LIMIT ?"
+	q += " ORDER BY n.updated_at DESC LIMIT ?"
 	args = append(args, limit)
 	rows, e := s.db.Query(q, args...)
 	if e != nil {
@@ -254,7 +257,9 @@ func (s *Server) notesQuery(book string, limit int) []map[string]any {
 	return noteRows(rows)
 }
 func (s *Server) bookmarks(w http.ResponseWriter, r *http.Request) {
-	if !method(w, r, "GET") && r.Method != "POST" {
+	if r.Method != "GET" && r.Method != "POST" {
+		w.Header().Set("Allow", "GET, POST")
+		fail(w, 405, "method_not_allowed", "Method not allowed")
 		return
 	}
 	if r.Method == "POST" {
@@ -308,6 +313,67 @@ func (s *Server) bookmark(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(204)
 }
+func (s *Server) highlights(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		var v struct {
+			BookID int64  `json:"book_id"`
+			Loc    string `json:"loc"`
+			Text   string `json:"text"`
+			Color  string `json:"color"`
+		}
+		if json.NewDecoder(r.Body).Decode(&v) != nil {
+			fail(w, 400, "invalid_json", "Invalid JSON")
+			return
+		}
+		if v.Color == "" {
+			v.Color = "yellow"
+		}
+		res, e := s.db.Exec("INSERT INTO highlights(book_id,loc,text,color,created_at) VALUES(?,?,?,?,?)", v.BookID, v.Loc, v.Text, v.Color, time.Now().UTC().Format(time.RFC3339))
+		if e != nil {
+			fail(w, 400, "invalid_highlight", e.Error())
+			return
+		}
+		id, _ := res.LastInsertId()
+		jsonOut(w, map[string]any{"id": id, "book_id": v.BookID, "loc": v.Loc, "text": v.Text, "color": v.Color})
+		return
+	}
+	if !method(w, r, "GET") {
+		return
+	}
+	bookID := r.URL.Query().Get("book_id")
+	q := "SELECT id,book_id,loc,text,color,created_at FROM highlights"
+	args := []any{}
+	if bookID != "" {
+		q += " WHERE book_id=?"
+		args = append(args, bookID)
+	}
+	rows, e := s.db.Query(q+" ORDER BY created_at DESC", args...)
+	if e != nil {
+		fail(w, 500, "database", e.Error())
+		return
+	}
+	defer rows.Close()
+	items := []map[string]any{}
+	for rows.Next() {
+		var id, book int64
+		var loc, text, color, created string
+		if rows.Scan(&id, &book, &loc, &text, &color, &created) == nil {
+			items = append(items, map[string]any{"id": id, "book_id": book, "loc": loc, "text": text, "color": color, "created_at": created})
+		}
+	}
+	jsonOut(w, map[string]any{"items": items})
+}
+func (s *Server) highlight(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, "DELETE") {
+		return
+	}
+	_, e := s.db.Exec("DELETE FROM highlights WHERE id=?", strings.TrimPrefix(r.URL.Path, "/api/highlights/"))
+	if e != nil {
+		fail(w, 500, "database", e.Error())
+		return
+	}
+	w.WriteHeader(204)
+}
 func (s *Server) notes(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		var v struct {
@@ -349,9 +415,9 @@ func noteRows(rows *sql.Rows) []map[string]any {
 	a := []map[string]any{}
 	for rows.Next() {
 		var id, b int64
-		var loc, text, created, updated string
-		if rows.Scan(&id, &b, &loc, &text, &created, &updated) == nil {
-			a = append(a, map[string]any{"id": id, "book_id": b, "loc": loc, "text": text, "created_at": created, "updated_at": updated})
+		var loc, text, created, updated, title string
+		if rows.Scan(&id, &b, &loc, &text, &created, &updated, &title) == nil {
+			a = append(a, map[string]any{"id": id, "book_id": b, "loc": loc, "text": text, "created_at": created, "updated_at": updated, "book_title": title})
 		}
 	}
 	return a

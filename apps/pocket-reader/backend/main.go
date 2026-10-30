@@ -232,9 +232,13 @@ func (s *Server) seedMock() error {
 		tags, _ := json.Marshal([]string{genres[(i-1)%len(genres)], "Demo"})
 		author := fmt.Sprintf("Author %02d", (i-1)%25+1)
 		format := []string{"EPUB", "PDF", "TXT", "Markdown"}[(i-1)%4]
-		_, e = tx.Exec("INSERT INTO books(title,author,series,language,format,size,cover,tags,mock) VALUES(?,?,?,?,?,?,?,?,1)", title, author, fmt.Sprintf("Collection %02d", (i-1)/5+1), []string{"en", "zh", "ja"}[(i-1)%3], format, int64(50000+i*733), "/api/books/mock/cover", string(tags))
-		if e != nil {
-			return e
+		res, err := tx.Exec("INSERT INTO books(title,author,series,language,format,size,cover,tags,mock) VALUES(?,?,?,?,?,?,?,?,1)", title, author, fmt.Sprintf("Collection %02d", (i-1)/5+1), []string{"en", "zh", "ja"}[(i-1)%3], format, int64(50000+i*733), "", string(tags))
+		if err != nil {
+			return err
+		}
+		id, _ := res.LastInsertId()
+		if _, err = tx.Exec("UPDATE books SET cover=? WHERE id=?", fmt.Sprintf("/api/books/%d/cover", id), id); err != nil {
+			return err
 		}
 	}
 	return tx.Commit()
@@ -306,19 +310,19 @@ func (s *Server) books(w http.ResponseWriter, r *http.Request) {
 	args := []any{}
 	conditions := []string{}
 	if q != "" {
-		conditions = append(conditions, "(title LIKE ? OR author LIKE ?)")
+		conditions = append(conditions, "(b.title LIKE ? OR b.author LIKE ?)")
 		args = append(args, "%"+q+"%", "%"+q+"%")
 	}
 	if collection := r.URL.Query().Get("collection"); collection != "" {
-		conditions = append(conditions, "id IN (SELECT book_id FROM collection_books WHERE collection_id=?)")
+		conditions = append(conditions, "b.id IN (SELECT book_id FROM collection_books WHERE collection_id=?)")
 		args = append(args, collection)
 	}
 	if len(conditions) > 0 {
 		where = " WHERE " + strings.Join(conditions, " AND ")
 	}
 	var total int
-	_ = s.db.QueryRow("SELECT count(*) FROM books"+where, args...).Scan(&total)
-	rows, e := s.db.Query("SELECT id,title,author,series,language,format,path,size,modified,cover,tags,favorite,mock FROM books"+where+" ORDER BY id LIMIT ? OFFSET ?", append(args, limit, (page-1)*limit)...)
+	_ = s.db.QueryRow("SELECT count(*) FROM books b"+where, args...).Scan(&total)
+	rows, e := s.db.Query("SELECT b.id,b.title,b.author,b.series,b.language,b.format,b.path,b.size,b.modified,b.cover,b.tags,b.favorite,b.mock,COALESCE(p.percent,0) FROM books b LEFT JOIN reading_progress p ON p.book_id=b.id"+where+" ORDER BY b.id LIMIT ? OFFSET ?", append(args, limit, (page-1)*limit)...)
 	if e != nil {
 		fail(w, 500, "database", e.Error())
 		return
@@ -326,9 +330,8 @@ func (s *Server) books(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 	items := []Book{}
 	for rows.Next() {
-		b, e := scanBook(rows)
-		if e == nil {
-			_ = s.db.QueryRow("SELECT percent FROM reading_progress WHERE book_id=?", b.ID).Scan(&b.Progress)
+		b, err := scanBookWithProgress(rows)
+		if err == nil {
 			items = append(items, b)
 		}
 	}
@@ -336,10 +339,22 @@ func (s *Server) books(w http.ResponseWriter, r *http.Request) {
 }
 func scanBook(r interface{ Scan(...any) error }) (Book, error) {
 	var b Book
-	var tags string
+	var tags, p sql.NullString
 	var fav, mock int
-	e := r.Scan(&b.ID, &b.Title, &b.Author, &b.Series, &b.Language, &b.Format, &b.Path, &b.Size, &b.Modified, &b.Cover, &tags, &fav, &mock)
-	_ = json.Unmarshal([]byte(tags), &b.Tags)
+	e := r.Scan(&b.ID, &b.Title, &b.Author, &b.Series, &b.Language, &b.Format, &p, &b.Size, &b.Modified, &b.Cover, &tags, &fav, &mock)
+	_ = json.Unmarshal([]byte(tags.String), &b.Tags)
+	b.Path = p.String
+	b.Favorite = fav != 0
+	b.Mock = mock != 0
+	return b, e
+}
+func scanBookWithProgress(r interface{ Scan(...any) error }) (Book, error) {
+	var b Book
+	var tags, p sql.NullString
+	var fav, mock int
+	e := r.Scan(&b.ID, &b.Title, &b.Author, &b.Series, &b.Language, &b.Format, &p, &b.Size, &b.Modified, &b.Cover, &tags, &fav, &mock, &b.Progress)
+	_ = json.Unmarshal([]byte(tags.String), &b.Tags)
+	b.Path = p.String
 	b.Favorite = fav != 0
 	b.Mock = mock != 0
 	return b, e
