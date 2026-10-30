@@ -63,7 +63,7 @@ overflow, short documents, duplicate hashes, console errors and HTTP ≥400; thi
   `apps/pocket-reader/tests/capture-screenshots.mjs` + `make screenshots`, with deep-link driven
   states, hash/size/overflow/console gates, and a manifest → `apps/pocket-reader/tests/`,
   `Makefile`.
-- `dpi-1x-720x720.png` was a byte-for-byte duplicate of `library-720x720.png` (same URL, DPR 1),
+- the former 1× DPI capture was a byte-for-byte duplicate of `library-720x720.png` (same URL, DPR 1),
   which violates the no-duplicate-image rule. → dropped the redundant 1× file (the docs now
   state that 1× is identical to `library-720x720.png`), keeping DPR 1.5/2/3 as distinct
   captures → `docs/SCREENSHOTS.md` and the screenshot set → this run reports 21/21 unique.
