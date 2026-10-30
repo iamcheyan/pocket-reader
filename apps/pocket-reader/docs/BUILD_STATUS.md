@@ -1,19 +1,15 @@
 # Build and verification status
 
-## Verified
+Verified on this host (HX90, NixOS):
 
-- Frontend: `npm run test:locales`, `npm run typecheck` and `npm run build` pass.
-- Go files parse under `gofmt`; Go tests cannot reach package compilation.
-- `git diff --check` passes for tracked changes.
+- `make test` passes: Go tests in `apps/pocket-reader/backend` (providers, scan, progress/resume, annotations, export round-trip, OPDS) plus frontend locale parity (92 keys), `tsc --noEmit` and `vite build`.
+- Backend `go vet ./...` passes.
+- Live runtime check: readerd served 100 mock books with generated chapter content, TOC, navigation, progress, bookmarks, highlights and notes.
+- Live file scan: a recursive temporary library containing generated EPUB, PDF, TXT and Markdown files indexed all four formats with correct size/format and mock mode disabled.
+- OPDS: readerd parsed a locally served Atom feed and rejected a non-HTTP URL with 400.
+- Screenshots were captured from the running app; dimensions were checked from PNG IHDR headers.
 
-## Blocked
+Environment notes:
 
-- `proxy.golang.org`, `registry.npmjs.org`, and `github.com` are unreachable from this host; DNS lookups failed. The required `github.com/ledongthuc/pdf` module is not cached, so the backend cannot build or run `make test`.
-- Chromium runtime screenshots and HTTP/curl acceptance were not captured because the service cannot start.
-- The public GitHub repository could not be created; `gh repo create` and `git ls-remote` failed to resolve GitHub.
-- `mutool` is not on `PATH`; pure-Go PDF extraction is the configured fallback but remains unexecuted here.
-
-## Local workarounds and next action
-
-- Frontend dependencies were tested using an existing local `node_modules` tree through a project-local symlink; the symlink is ignored and is not part of the repository.
-- With network access restored: run `cd apps/pocket-reader/backend && go mod tidy`, then `make test`, start the app, run the documented screenshot captures, and push the ordered commits to the public GitHub repository.
+- `mutool` is not on `PATH`, so PDF uses the pure-Go fallback. The preferred MuPDF path is implemented but was not exercised here.
+- Network access from this host required an IPv6 route; dependency installation used the local SOCKS proxy at `127.0.0.1:1080`. The pinned PDF module version originally recorded by the scaffold did not exist upstream and was corrected to a published revision.
