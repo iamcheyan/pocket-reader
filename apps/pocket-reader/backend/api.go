@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/url"
@@ -28,7 +29,7 @@ func (s *Server) book(w http.ResponseWriter, r *http.Request) {
 		}
 		if b.Mock {
 			w.Header().Set("Content-Type", "image/svg+xml")
-			io.WriteString(w, `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420"><rect width="100%" height="100%" fill="#e8e0d3"/><text x="50%" y="50%" text-anchor="middle" font-family="sans-serif">Pocket Reader</text></svg>`)
+			_, _ = io.WriteString(w, fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420" viewBox="0 0 300 420"><rect width="300" height="420" fill="#e8e0d3"/><rect x="14" y="14" width="272" height="392" rx="9" fill="#839b83"/><text x="32" y="74" fill="white" font-family="sans-serif" font-size="14">%s</text><text x="32" y="190" fill="white" font-family="serif" font-size="23">%s</text><text x="32" y="375" fill="white" font-family="sans-serif" font-size="14">%s</text></svg>`, html.EscapeString(b.Format), html.EscapeString(b.Title), html.EscapeString(b.Author)))
 			return
 		}
 		fail(w, 404, "cover_not_found", "Book has no cover")
@@ -83,24 +84,41 @@ func (s *Server) book(w http.ResponseWriter, r *http.Request) {
 			jsonOut(w, map[string]any{"book_id": b.ID, "chapter": ch, "loc": loc, "page": page, "percent": percent, "updated_at": updated, "device": device})
 		case "PUT":
 			var v struct {
-				Chapter string  `json:"chapter"`
-				Loc     string  `json:"loc"`
-				Percent float64 `json:"percent"`
-				Page    int     `json:"page"`
-				Device  string  `json:"device"`
+				Chapter string          `json:"chapter"`
+				Loc     json.RawMessage `json:"loc"`
+				Percent float64         `json:"percent"`
+				Page    int             `json:"page"`
+				Device  string          `json:"device"`
 			}
 			if json.NewDecoder(r.Body).Decode(&v) != nil {
 				fail(w, 400, "invalid_json", "Invalid JSON")
 				return
 			}
+			var location any
+			if len(v.Loc) > 0 {
+				if err := json.Unmarshal(v.Loc, &location); err != nil {
+					fail(w, 400, "invalid_location", "loc must be a string or number")
+					return
+				}
+				switch location.(type) {
+				case string, float64:
+				default:
+					fail(w, 400, "invalid_location", "loc must be a string or number")
+					return
+				}
+			}
+			loc := ""
+			if location != nil {
+				loc = fmt.Sprint(location)
+			}
 			now := time.Now().UTC().Format(time.RFC3339)
-			_, e := s.db.Exec("INSERT INTO reading_progress(book_id,chapter,loc,page,percent,updated_at,device) VALUES(?,?,?,?,?,?,?) ON CONFLICT(book_id) DO UPDATE SET chapter=excluded.chapter,loc=excluded.loc,page=excluded.page,percent=excluded.percent,updated_at=excluded.updated_at,device=excluded.device", id, v.Chapter, v.Loc, v.Page, v.Percent, now, v.Device)
+			_, e := s.db.Exec("INSERT INTO reading_progress(book_id,chapter,loc,page,percent,updated_at,device) VALUES(?,?,?,?,?,?,?) ON CONFLICT(book_id) DO UPDATE SET chapter=excluded.chapter,loc=excluded.loc,page=excluded.page,percent=excluded.percent,updated_at=excluded.updated_at,device=excluded.device", id, v.Chapter, loc, v.Page, v.Percent, now, v.Device)
 			if e != nil {
 				fail(w, 500, "database", e.Error())
 				return
 			}
 			_, _ = s.db.Exec("INSERT INTO history(book_id,action,created_at) VALUES(?,?,?)", id, "progress", now)
-			jsonOut(w, map[string]any{"book_id": b.ID, "chapter": v.Chapter, "loc": v.Loc, "page": v.Page, "percent": v.Percent, "updated_at": now, "device": v.Device})
+			jsonOut(w, map[string]any{"book_id": b.ID, "chapter": v.Chapter, "loc": location, "page": v.Page, "percent": v.Percent, "updated_at": now, "device": v.Device})
 		default:
 			fail(w, 405, "method_not_allowed", "Method not allowed")
 		}
@@ -713,7 +731,7 @@ func (s *Server) doScan(ctx context.Context) {
 		}
 		format := strings.TrimPrefix(strings.ToUpper(filepath.Ext(path)), ".")
 		tags, _ := json.Marshal([]string{})
-		_, e = s.db.Exec("INSERT INTO books(title,author,language,format,path,size,modified,tags,mock) VALUES(?,?,?,?,?,?,?,?,0) ON CONFLICT(path) DO UPDATE SET title=excluded.title,author=excluded.author,language=excluded.language,format=excluded.format,size=excluded.size,modified=excluded.modified", meta.Title, meta.Author, meta.Language, format, path, info.Size(), info.ModTime().UnixNano(), string(tags))
+		_, e = s.db.Exec("INSERT INTO books(title,author,series,language,format,path,size,modified,tags,mock) VALUES(?,?,?,?,?,?,?,?,?,0) ON CONFLICT(path) DO UPDATE SET title=excluded.title,author=excluded.author,series=excluded.series,language=excluded.language,format=excluded.format,size=excluded.size,modified=excluded.modified", meta.Title, meta.Author, "", meta.Language, format, path, info.Size(), info.ModTime().UnixNano(), string(tags))
 		if e == nil {
 			if meta.Author != "" {
 				_, _ = s.db.Exec("INSERT INTO authors(name) VALUES(?) ON CONFLICT(name) DO NOTHING", meta.Author)

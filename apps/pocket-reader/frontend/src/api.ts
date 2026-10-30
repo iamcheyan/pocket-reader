@@ -1,4 +1,4 @@
-export type Book = { id: number; title: string; author?: string; authors?: string[]; description?: string; language?: string; format?: string; cover_url?: string; cover?: string; tags?: string[]; favorite?: boolean; progress?: number; page_count?: number; file_size?: number; series?: string; publisher?: string; added_at?: string };
+export type Book = { id: number; title: string; author?: string; authors?: string[]; description?: string; language?: string; format?: string; cover_url?: string; cover?: string; mock?: boolean; tags?: string[]; favorite?: boolean; progress?: number; page_count?: number; file_size?: number; series?: string; publisher?: string; added_at?: string };
 export type Progress = { book_id: number; chapter?: string | number; loc?: string | number; percent: number; updated_at?: string; device?: string };
 export type Bookmark = { id: number; book_id: number; loc: string | number; chapter?: string; text?: string; created_at?: string };
 export type Highlight = { id: number; book_id: number; loc: string | number; text: string; title?: string; color?: string; note?: string; created_at?: string };

@@ -145,44 +145,66 @@ func (p mockProvider) Content(_ context.Context, d Document, l Location) (Conten
 	return chunk(x.title, x.parts, l.Loc, "text/plain")
 }
 func Main() {
- dataDir := os.Getenv("READERD_DATA")
- if dataDir == "" { dataDir, _ = os.UserConfigDir(); dataDir = filepath.Join(dataDir, "pocket-reader") }
- if err := os.MkdirAll(dataDir, 0755); err != nil { log.Fatal(err) }
- dbPath := os.Getenv("READERD_DB")
- if dbPath == "" { dbPath = filepath.Join(dataDir, "readerd.sqlite") }
- root := os.Getenv("READERD_BOOKS")
- if root == "" { home, err := os.UserHomeDir(); if err != nil { log.Fatal(err) }; root = filepath.Join(home, "Books") }
+	dataDir := os.Getenv("READERD_DATA")
+	if dataDir == "" {
+		var err error
+		dataDir, err = os.UserConfigDir()
+		if err != nil {
+			log.Fatal(err)
+		}
+		dataDir = filepath.Join(dataDir, "pocket-reader")
+	}
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Fatal(err)
+	}
+	dbPath := os.Getenv("READERD_DB")
+	if dbPath == "" {
+		dbPath = filepath.Join(dataDir, "readerd.sqlite")
+	}
+	root := os.Getenv("READERD_BOOKS")
+	if root == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			log.Fatal(err)
+		}
+		root = filepath.Join(home, "Books")
+	}
 	addr := os.Getenv("READERD_ADDR")
 	if addr == "" {
-		addr = ":8765"
-	}
-	base, e := os.Getwd()
-	if e != nil {
-		log.Fatal(e)
+		addr = "127.0.0.1:8765"
 	}
 	if !filepath.IsAbs(dbPath) {
-		dbPath = filepath.Join(base, dbPath)
+		dbPath = filepath.Join(dataDir, dbPath)
 	}
 	if !filepath.IsAbs(root) {
-		root = filepath.Join(base, root)
+		root = filepath.Join(dataDir, root)
 	}
-	if e = os.MkdirAll(filepath.Dir(dbPath), 0755); e != nil {
-		log.Fatal(e)
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
+		log.Fatal(err)
 	}
-	if e = os.MkdirAll(root, 0755); e != nil {
-		log.Fatal(e)
+	if err := os.MkdirAll(root, 0755); err != nil {
+		log.Fatal(err)
 	}
-	db, e := sql.Open("sqlite", dbPath)
-	if e != nil {
-		log.Fatal(e)
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		log.Fatal(err)
 	}
 	db.SetMaxOpenConns(1)
 	s := &Server{db: db, root: root}
-	if e = s.migrate(); e != nil {
-		log.Fatal(e)
+	if err = s.migrate(); err != nil {
+		log.Fatal(err)
 	}
-	if e = s.seedMock(); e != nil {
-		log.Fatal(e)
+	hasBooks, err := hasSupportedFile(root)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if hasBooks {
+		if _, err := db.Exec("DELETE FROM books WHERE mock=1"); err != nil {
+			log.Fatal(err)
+		}
+		s.doScan(context.Background())
+	} else if err = s.seedMock(); err != nil {
+		log.Fatal(err)
 	}
 	log.Printf("readerd %s listening on %s", version, addr)
 	log.Fatal(http.ListenAndServe(addr, s.routes()))
