@@ -111,6 +111,22 @@ func searchParts(parts []string, q string) []SearchHit {
 	}
 	return out
 }
+func navigableChunk(title string, parts []string, i int, ctype string) (ContentChunk, error) {
+	if i < 0 || i >= len(parts) {
+		return ContentChunk{}, fmt.Errorf("location out of range")
+	}
+	c := ContentChunk{Loc: strconv.Itoa(i), Title: title, Content: parts[i], ContentType: ctype, HasPrevious: i > 0, HasNext: i+1 < len(parts)}
+	if c.HasPrevious {
+		v := strconv.Itoa(i - 1)
+		c.PreviousLoc = &v
+	}
+	if c.HasNext {
+		v := strconv.Itoa(i + 1)
+		c.NextLoc = &v
+	}
+	return c, nil
+}
+
 func chunk(title string, parts []string, loc, ctype string) (ContentChunk, error) {
 	i := 0
 	if loc != "" {
@@ -149,18 +165,25 @@ type epubPackage struct {
 	} `xml:"spine"`
 }
 type epubContainer struct {
-	Root struct {
-		OPF string `xml:"full-path,attr"`
-	} `xml:"rootfile"`
+	RootFiles struct {
+		Root struct {
+			OPF string `xml:"full-path,attr"`
+		} `xml:"rootfile"`
+	} `xml:"rootfiles"`
 }
 type epubNav struct {
-	Items []struct {
-		Href    string `xml:"href,attr"`
-		Anchors []struct {
-			Href  string `xml:"href,attr"`
-			Label string `xml:",chardata"`
-		} `xml:"a"`
-	} `xml:"li"`
+	Body struct {
+		Nav struct {
+			Ol struct {
+				Items []struct {
+					Anchors []struct {
+						Href  string `xml:"href,attr"`
+						Label string `xml:",chardata"`
+					} `xml:"a"`
+				} `xml:"li"`
+			} `xml:"ol"`
+		} `xml:"nav"`
+	} `xml:"body"`
 }
 
 func (EPUBProvider) Open(ctx context.Context, filename string) (Document, error) {
@@ -190,10 +213,10 @@ func (EPUBProvider) Open(ctx context.Context, filename string) (Document, error)
 		return nil, e
 	}
 	var c epubContainer
-	if e = xml.Unmarshal(container, &c); e != nil || c.Root.OPF == "" {
+	if e = xml.Unmarshal(container, &c); e != nil || c.RootFiles.Root.OPF == "" {
 		return nil, fmt.Errorf("invalid EPUB container")
 	}
-	opfBytes, e := read(c.Root.OPF)
+	opfBytes, e := read(c.RootFiles.Root.OPF)
 	if e != nil {
 		return nil, e
 	}
@@ -201,7 +224,7 @@ func (EPUBProvider) Open(ctx context.Context, filename string) (Document, error)
 	if e = xml.Unmarshal(opfBytes, &pkg); e != nil {
 		return nil, e
 	}
-	base := path.Dir(c.Root.OPF)
+	base := path.Dir(c.RootFiles.Root.OPF)
 	manifest := map[string]string{}
 	for _, item := range pkg.Manifest.Items {
 		manifest[item.ID] = path.Clean(path.Join(base, item.Href))
@@ -217,14 +240,12 @@ func (EPUBProvider) Open(ctx context.Context, filename string) (Document, error)
 			return nil, e
 		}
 		title := strings.TrimSuffix(filepath.Base(name), filepath.Ext(name))
-		re := regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>|<h[1-6][^>]*>(.*?)</h[1-6]>`)
-		if m := re.FindStringSubmatch(string(b)); len(m) > 0 {
-			for _, v := range m[1:] {
-				if v != "" {
-					title = stripMarkup(v)
-					break
-				}
-			}
+		heading := regexp.MustCompile(`(?is)<h[1-6][^>]*>(.*?)</h[1-6]>`)
+		titleTag := regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
+		if m := heading.FindStringSubmatch(string(b)); len(m) > 1 && strings.TrimSpace(stripMarkup(m[1])) != "" {
+			title = stripMarkup(m[1])
+		} else if m := titleTag.FindStringSubmatch(string(b)); len(m) > 1 {
+			title = stripMarkup(m[1])
 		}
 		parts = append(parts, string(b))
 		titles = append(titles, title)
@@ -249,7 +270,7 @@ func (EPUBProvider) Open(ctx context.Context, filename string) (Document, error)
 		if xml.Unmarshal(b, &n) != nil {
 			continue
 		}
-		for _, x := range n.Items {
+		for _, x := range n.Body.Nav.Ol.Items {
 			if len(x.Anchors) == 0 {
 				continue
 			}
