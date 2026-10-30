@@ -1,0 +1,5 @@
+apps/pocket-reader/frontend/node_modules/
+apps/pocket-reader/frontend/node_modules
+apps/pocket-reader/frontend/dist/
+apps/pocket-reader/frontend/tsconfig.tsbuildinfo
+apps/pocket-reader/backend/readerd.sqlite*
