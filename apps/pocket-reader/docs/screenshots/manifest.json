@@ -1,0 +1,196 @@
+{
+  "captured_at": "2026-10-30T17:11:40.464Z",
+  "ui": "http://127.0.0.1:5199",
+  "chrome": "/usr/bin/google-chrome",
+  "screenshots": [
+    {
+      "name": "library-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=library&theme=light&lang=en",
+      "sha256": "9eb8f5ebaf8faef23b7faa7776a240425271f2f8f3e6864c4f88b4cb7d2253ca"
+    },
+    {
+      "name": "library-1920x1080.png",
+      "width": 1920,
+      "height": 1080,
+      "css": "1920x1080",
+      "dsf": 1,
+      "query": "screen=library&theme=light&lang=en",
+      "sha256": "aa757518c3955f3a0268dabc615e3175ac62b18884b994b814ce18f88ea67ee5"
+    },
+    {
+      "name": "library-720x720.png",
+      "width": 720,
+      "height": 720,
+      "css": "720x720",
+      "dsf": 1,
+      "query": "screen=library&theme=light&lang=en",
+      "sha256": "ffc5b75ed499ce07d2a004c4b5d4ee611471ee4ddc0b168bff4885feb03c5e89"
+    },
+    {
+      "name": "library-480x320.png",
+      "width": 480,
+      "height": 320,
+      "css": "480x320",
+      "dsf": 1,
+      "query": "screen=library&theme=light&lang=en",
+      "sha256": "95e1d73fffd21dcd18e70b15226fd18cc59ca426038f1ff9d33c43ac4e790b19"
+    },
+    {
+      "name": "library-320x240.png",
+      "width": 320,
+      "height": 240,
+      "css": "320x240",
+      "dsf": 1,
+      "query": "screen=library&theme=light&lang=en",
+      "sha256": "f60bf630803074b2411a62ffd5c4e4e2a576feda6573a12fce614a01593baa45"
+    },
+    {
+      "name": "details-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "book=1&theme=light&lang=en",
+      "sha256": "81b81e3262c4c55ef9417a5e88759ef9f0e1326ecde3fbc8274f3cdba17d9fcc"
+    },
+    {
+      "name": "reader-epub-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=reader&book=1&theme=light&lang=en",
+      "sha256": "6cc1c54734fddb8ff43455ebed2ee3fa79fb8459cc295699f6092821709fc045"
+    },
+    {
+      "name": "reader-pdf-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=reader&book=2&theme=light&lang=en",
+      "sha256": "d40e183328ab0fce9e4729a09e1403f56211f7b32a486a621d83f59d8dc7154e"
+    },
+    {
+      "name": "reader-320x240.png",
+      "width": 320,
+      "height": 240,
+      "css": "320x240",
+      "dsf": 1,
+      "query": "screen=reader&book=1&theme=light&lang=en",
+      "sha256": "ea78d2ebb32e7c2e7a772a46bf3e4335ea9c0007b7741f649b695eff0fc71569"
+    },
+    {
+      "name": "bookmarks-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=bookmarks&theme=light&lang=en",
+      "sha256": "0834a42672f6e8888449342723e6942d7a802f6eda19625b9093d79ecc99bb0e"
+    },
+    {
+      "name": "notes-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=notes&theme=light&lang=en",
+      "sha256": "ef6bb814899a7bbdbf7d8742fa1b30fceb49e9ff4517664b8d23c120ca24626f"
+    },
+    {
+      "name": "search-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=search&q=Volume&theme=light&lang=en",
+      "sha256": "fcc2b786b2009dcb6b29ef35a3c0af28fa7ca96614cb1ecebfff22b9de337c4e"
+    },
+    {
+      "name": "settings-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=settings&theme=light&lang=en",
+      "sha256": "c1ece7b2e19bb21de46d23c291412e39dfacc194ab1ade6822e976f31a61f529"
+    },
+    {
+      "name": "settings-eink-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=settings&theme=eink&lang=en",
+      "sha256": "d1c8483273f27cbe15d8b1f2585d390c3e3c90f1793d822d53735b29d28df026"
+    },
+    {
+      "name": "dark-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=library&theme=dark&lang=en",
+      "sha256": "79552cb970dce6526d1261821c3de4c06240eadefc22f34283c57d852c40f46e"
+    },
+    {
+      "name": "eink-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=library&theme=eink&lang=en",
+      "sha256": "26866b62d13d3b37e7c203b404624909338f4cab1bc01a47cff26b6aecdff033"
+    },
+    {
+      "name": "library-zh-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=library&theme=light&lang=zh",
+      "sha256": "7a881b5f41811eaf6fb285dba181904060fcdb1f7130927ae64972af0d319d8e"
+    },
+    {
+      "name": "library-ja-1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "css": "1280x720",
+      "dsf": 1,
+      "query": "screen=library&theme=light&lang=ja",
+      "sha256": "d249201f4af4854efe7969f39d626e0dee7970048e7fddcf14e960f38d423ac1"
+    },
+    {
+      "name": "dpi-1.5x-720x720.png",
+      "width": 1080,
+      "height": 1080,
+      "css": "720x720",
+      "dsf": 1.5,
+      "query": "screen=library&theme=light&lang=en",
+      "sha256": "6f63297cde663b0e3ae8243255a9b0013e0dad4fd0543d3dd4850d66a02fe4ab"
+    },
+    {
+      "name": "dpi-2x-720x720.png",
+      "width": 1440,
+      "height": 1440,
+      "css": "720x720",
+      "dsf": 2,
+      "query": "screen=library&theme=light&lang=en",
+      "sha256": "8142134c43c589e1c03d41acf9bc6ebddc0365454a3795e0ab7ae608236e7526"
+    },
+    {
+      "name": "dpi-3x-720x720.png",
+      "width": 2160,
+      "height": 2160,
+      "css": "720x720",
+      "dsf": 3,
+      "query": "screen=library&theme=light&lang=en",
+      "sha256": "a301c7af4e5065f7771263b7507da413962b87db2f0300808640e9e41ee4ec5f"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 All files were captured from the live app (readerd :8791 + Vite :5199) with Chromium headless, using generated fixtures in `/tmp/pr-books` and `READERD_DATA=/tmp/pr-data2`. No placeholders or hand-written HTML were used. Dimensions were verified by reading each PNG's IHDR header.
 
-Reproduce from the repository root (backend and frontend running):
+Reproduce from the repository root (backend and frontend running). `make screenshots` runs the full 21-shot matrix, fails on duplicate hashes/size mismatches/overflow/console errors, and writes `screenshots/manifest.json`:
 
 ```sh
 cd apps/pocket-reader/docs/screenshots
@@ -32,7 +32,6 @@ chromium --headless=new --disable-gpu --no-sandbox --hide-scrollbars \
 | `eink-1280x720.png` | Library | E-Ink | 1280×720 |
 | `library-zh-1280x720.png` | Library | Light, 简体中文 | 1280×720 |
 | `library-ja-1280x720.png` | Library | Light, 日本語 | 1280×720 |
-| `dpi-1x-720x720.png` | Library, DPR 1 | Light | 720×720 |
 | `dpi-1.5x-720x720.png` | Library, DPR 1.5 | Light | 1080×1080 |
 | `dpi-2x-720x720.png` | Library, DPR 2 | Light | 1440×1440 |
 | `dpi-3x-720x720.png` | Library, DPR 3 | Light | 2160×2160 |
@@ -41,4 +40,4 @@ chromium --headless=new --disable-gpu --no-sandbox --hide-scrollbars \
 
 `dark-1280x720.png` uses the dark palette (dark green-gray surfaces, soft shadows, rounded cards). `eink-1280x720.png` is grayscale, black-on-white, with square corners, no shadows or gradients, and no transitions. The two files differ in layout styling and are not interchangeable.
 
-DPI screenshots use `--force-device-scale-factor=1|1.5|2|3` on a 720×720 CSS viewport; the resulting PNG pixel sizes are listed above.
+DPI screenshots use `--force-device-scale-factor=1.5|2|3` on a 720×720 CSS viewport; the resulting PNG pixel sizes are listed above. The 1× variant is not stored because it would be byte-identical to `library-720x720.png`.
