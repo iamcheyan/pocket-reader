@@ -1,8 +1,8 @@
 # Verification — pocket-reader @ 2026-10-31
 
 - Verdict: PASS
-- Commit: `__COMMIT__` (fixes + screenshots; this document is the following commit)
-- Remote: `__REMOTE__`
+- Commit: `9ecb3e1c2a5963166c662938d85163709ccc5cfb` (fixes + screenshots; this document is the following commit)
+- Remote: `9ecb3e1c2a5963166c662938d85163709ccc5cfb`
 - Runtime: `readerd` on `127.0.0.1:8791` (fresh temp data, generated demo catalogue) + Vite `127.0.0.1:5199`; production bundle from `make test`
 - Toolchain: go 1.26.0, node v22.23.3, Chrome 155.0.8059.84
 
