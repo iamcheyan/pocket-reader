@@ -5,7 +5,7 @@
 - Local readerd + React/Vite architecture and REST boundary.
 - EPUB, PDF text extraction, TXT, and Markdown providers; persistent library and annotations.
 - Responsive library and reader UX, four themes, English/简体中文/日本語 locales, keyboard and gamepad input.
-  Full-text search over book bodies is not implemented. `/api/search` covers title and author; per-book search uses document providers. FTS5 tables are created but not populated or queried.
+  Full-text search over book bodies is not implemented. `/api/search` covers title and author only; per-book search uses document providers. FTS5 tables exist but are not populated or queried.
 
 ## Known limits
 
