@@ -1,7 +1,6 @@
 package readerd
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
 	"database/sql"
@@ -79,27 +78,7 @@ func TestGeneratedTextAndMarkdownProviders(t *testing.T) {
 }
 func TestEPUBGeneratedFixture(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sample.epub")
-	f, e := os.Create(path)
-	if e != nil {
-		t.Fatal(e)
-	}
-	z := zip.NewWriter(f)
-	members := map[string]string{"META-INF/container.xml": `<container><rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles></container>`, "OEBPS/content.opf": `<package><metadata><title>Package Title</title><creator>Package Author</creator><language>en</language><publisher>Reader Press</publisher></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml"/><item id="second" href="second.xhtml" media-type="application/xhtml+xml"/><item id="first" href="first.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="first"/><itemref idref="second"/></spine></package>`, "OEBPS/nav.xhtml": `<html><body><nav><ol><li><a href="first.xhtml">Opening Chapter</a></li><li><a href="second.xhtml">Closing Chapter</a></li></ol></nav></body></html>`, "OEBPS/second.xhtml": `<html><head><title>Second</title></head><body>Last chapter</body></html>`, "OEBPS/first.xhtml": `<html><head><title>First</title></head><body>Generated fixture phrase</body></html>`}
-	for name, data := range members {
-		w, e := z.Create(name)
-		if e != nil {
-			t.Fatal(e)
-		}
-		if _, e = w.Write([]byte(data)); e != nil {
-			t.Fatal(e)
-		}
-	}
-	if e = z.Close(); e != nil {
-		t.Fatal(e)
-	}
-	if e = f.Close(); e != nil {
-		t.Fatal(e)
-	}
+	writeEPUB(t, path)
 	p := EPUBProvider{}
 	d, e := p.Open(context.Background(), path)
 	if e != nil {
