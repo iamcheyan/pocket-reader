@@ -1,0 +1,17 @@
+{
+  "app": "reader",
+  "package_sha256": "a06d0ea961d82e4fdce077aafce7f9e04bd61f6c5cbf55e2114b63ee8de855f9",
+  "launcher_before": "28102",
+  "launcher_after": "21225",
+  "boot_sha256": "6ed41612bce1723d1eda64b5a0ee9333a105ed498b7085c03267539cf6c1b32d",
+  "frames": [
+    "home",
+    "home-focus",
+    "detail",
+    "detail-action",
+    "settings",
+    "settings-toggled"
+  ],
+  "runtime": "/mnt/sdcard/System/pocketjs/bin/pocket-linux-kms",
+  "deploy": "/storage/pjs/pocket-reader"
+}
